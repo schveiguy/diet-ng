@@ -11,6 +11,12 @@ import diet.parser;
 import diet.traits;
 
 
+private template _dietFileData(string filename)
+{
+	import diet.internal.string : stripUTF8BOM;
+	private static immutable contents = stripUTF8BOM(import(filename));
+}
+
 /** Compiles a Diet template file that is available as a string import.
 
 	The final HTML will be written to the given `_diet_output` output range.
@@ -31,9 +37,7 @@ import diet.traits;
 */
 template compileHTMLDietFile(string filename, ALIASES...)
 {
-	import diet.internal.string : stripUTF8BOM;
-	private static immutable contents = stripUTF8BOM(import(filename));
-	alias compileHTMLDietFile = compileHTMLDietFileString!(filename, contents, ALIASES);
+	alias compileHTMLDietFile = compileHTMLDietFileString!(filename, _dietFileData!filename.contents, ALIASES);
 }
 
 version(DietUseLive)
@@ -94,24 +98,9 @@ private string[] _getHTMLStrings(TRAITS...)(string filename, string expectedCode
 }
 
 
-/** Compiles a Diet template given as a string, with support for includes and extensions.
-
-	This function behaves the same as `compileHTMLDietFile`, except that the
-	contents of the file are
-
-	The final HTML will be written to the given `_diet_output` output range.
-
-	Params:
-		filename = The name to associate with `contents`
-		contents = The contents of the Diet template
-		ALIASES = A list of variables to make available inside of the template,
-			as well as traits structs annotated with the `@dietTraits`
-			attribute.
-		dst = The output range to write the generated HTML to.
-
-	See_Also: `compileHTMLDietFile`, `compileHTMLDietString`, `compileHTMLDietStrings`
-*/
-template compileHTMLDietFileString(string filename, alias contents, ALIASES...)
+// provide a place to cache compilation of a file. No reason to rebuild every
+// time a file is used.
+private template realCompileHTMLDietFileString(string filename, alias contents, TRAITS...)
 {
 	import std.conv : to;
 	private static immutable _diet_files = collectFiles!(filename, contents);
@@ -172,6 +161,29 @@ template compileHTMLDietFileString(string filename, alias contents, ALIASES...)
 			}
 		}
 	}
+}
+/** Compiles a Diet template given as a string, with support for includes and extensions.
+
+	This function behaves the same as `compileHTMLDietFile`, except that the
+	contents of the file are
+
+	The final HTML will be written to the given `_diet_output` output range.
+
+	Params:
+		filename = The name to associate with `contents`
+		contents = The contents of the Diet template
+		ALIASES = A list of variables to make available inside of the template,
+			as well as traits structs annotated with the `@dietTraits`
+			attribute.
+		dst = The output range to write the generated HTML to.
+
+	See_Also: `compileHTMLDietFile`, `compileHTMLDietString`, `compileHTMLDietStrings`
+*/
+template compileHTMLDietFileString(string filename, alias contents, ALIASES...)
+{
+	alias TRAITS = DietTraits!ALIASES;
+
+	alias _dietParser = realCompileHTMLDietFileString!(filename, contents, TRAITS)._dietParser;
 
 	version(DietUseLive)
 	{
