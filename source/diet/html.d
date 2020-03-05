@@ -136,7 +136,6 @@ private template realCompileHTMLDietFileString(string filename, alias contents, 
 
 
 
-	alias TRAITS = DietTraits!ALIASES;
 	static if (_diet_use_cache && is(typeof(import(_diet_cache_file_name)))) {
 		pragma(msg, "Using cached Diet HTML template "~filename~"...");
 		enum _dietParser = import(_diet_cache_file_name);
